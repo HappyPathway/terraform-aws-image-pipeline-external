@@ -1,0 +1,163 @@
+name: "Terraform Test"
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  setup:
+    name: Setup Test Environment
+    runs-on: ubuntu-latest
+    outputs:
+      test_cases: ${{ steps.get-test-cases.outputs.test_cases }}
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Get Test Cases
+        id: get-test-cases
+        run: |
+          TEST_CASES='["basic_resource_creation", "bucket_configurations", "vpc_endpoint_creation", "security_group_rules", "custom_tags"]'
+          echo "test_cases=$TEST_CASES" >> $GITHUB_OUTPUT
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
+
+      # Cache .terraform directory
+      - name: Cache Terraform Directory
+        uses: actions/cache@v3
+        with:
+          path: .terraform
+          key: ${{ runner.os }}-terraform-${{ hashFiles('**/.terraform.lock.hcl') }}
+          restore-keys: |
+            ${{ runner.os }}-terraform-
+
+      - name: Terraform Init
+        run: terraform init -upgrade
+
+      - name: Upload Terraform Directory
+        uses: actions/upload-artifact@v3
+        with:
+          name: terraform-dir
+          path: |
+            .terraform
+            .terraform.lock.hcl
+
+  test:
+    needs: setup
+    name: Run Test Case
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        test_case: ${{ fromJson(needs.setup.outputs.test_cases) }}
+      # Allow all test cases to run even if one fails
+      fail-fast: false
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
+
+      - name: Download Terraform Directory
+        uses: actions/download-artifact@v3
+        with:
+          name: terraform-dir
+
+      - name: Run Single Test Case
+        run: |
+          terraform test -test-directory="tests" \
+            -filter="${{ matrix.test_case }}" \
+            -coverage="${{ matrix.test_case }}_coverage.out"
+        env:
+          TF_SKIP_PROVIDER_VERIFY: "true"
+
+      - name: Upload Test Coverage
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-coverage-${{ matrix.test_case }}
+          path: ${{ matrix.test_case }}_coverage.out
+          retention-days: 14
+
+  aggregate-results:
+    needs: [test]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download All Coverage Reports
+        uses: actions/download-artifact@v3
+        with:
+          path: coverage-reports
+
+      - name: Display Structure of Coverage Reports
+        run: ls -R coverage-reports
+
+      - name: Aggregate Coverage Reports
+        run: |
+          echo "# Test Coverage Summary" > coverage_summary.md
+          echo "## Individual Test Results" >> coverage_summary.md
+          
+          total_resources=0
+          covered_resources=0
+          
+          for report in coverage-reports/test-coverage-*/coverage.out; do
+            test_case=$(basename $(dirname $report) | sed 's/test-coverage-//')
+            echo "### $test_case" >> coverage_summary.md
+            cat $report >> coverage_summary.md
+            
+            # Extract coverage numbers
+            while IFS= read -r line; do
+              if [[ $line =~ ([0-9]+)/([0-9]+)[[:space:]]resources[[:space:]]covered ]]; then
+                covered_resources=$((covered_resources + ${BASH_REMATCH[1]}))
+                total_resources=$((total_resources + ${BASH_REMATCH[2]}))
+              fi
+            done < "$report"
+            
+            echo -e "\n---\n" >> coverage_summary.md
+          done
+          
+          # Calculate total coverage percentage
+          coverage=$(( (covered_resources * 100) / total_resources ))
+          echo "{\"coverage\": ${coverage}}" > coverage-badge.json
+          
+          # Add total coverage to summary
+          echo -e "\n## Total Coverage" >> coverage_summary.md
+          echo "${coverage}% (${covered_resources}/${total_resources} resources)" >> coverage_summary.md
+
+      - name: Upload Aggregated Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-coverage-summary
+          path: coverage_summary.md
+          retention-days: 14
+
+      - name: Upload Coverage Badge Data
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-badge
+          path: coverage-badge.json
+          retention-days: 14
+
+      - name: Commit Coverage Badge
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add coverage-badge.json
+          git commit -m "Update coverage badge [skip ci]" || echo "No changes to commit"
+          git push
