@@ -32,3 +32,8 @@ output "vpc_endpoints" {
   description = "Map of created VPC endpoints"
   value       = var.enable_vpc_endpoints ? aws_vpc_endpoint.endpoints : null
 }
+
+output "vpc_config" {
+  description = "VPC configuration including VPC ID, region, security groups, and subnets"
+  value       = local.vpc_config
+}

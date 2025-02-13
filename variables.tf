@@ -71,3 +71,24 @@ variable "enable_state_backend" {
   type        = bool
   default     = true
 }
+
+variable "vpc_id" {
+  type        = string
+  description = "The ID of the VPC where resources will be created"
+}
+
+variable "region" {
+  type        = string
+  description = "The AWS region where resources will be created"
+}
+
+variable "subnet_ids" {
+  type        = list(string)
+  description = "List of subnet IDs where resources will be created"
+}
+
+variable "additional_security_group_ids" {
+  type        = list(string)
+  description = "Additional security group IDs to be added to the VPC configuration"
+  default     = []
+}
