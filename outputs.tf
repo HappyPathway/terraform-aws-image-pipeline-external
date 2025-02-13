@@ -45,3 +45,18 @@ output "vpc_config" {
   description = "VPC configuration including VPC ID, region, security groups, and subnets"
   value       = local.vpc_config
 }
+
+output "build_user_role_arn" {
+  description = "The ARN of the build user IAM role"
+  value       = var.enable_build_user ? aws_iam_role.build_user_role[0].arn : null
+}
+
+output "build_user_policy" {
+  description = "The policy document for the build user"
+  value       = var.enable_build_user ? aws_iam_role_policy.build_user_policy[0].policy : null
+}
+
+output "build_user_instance_profile" {
+  description = "The instance profile for the build user"
+  value       = var.enable_build_user ? aws_iam_instance_profile.build_user_instance_profile[0] : null
+}

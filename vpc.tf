@@ -22,3 +22,16 @@ locals {
     subnets = var.subnet_ids
   }
 }
+
+resource "aws_vpc_endpoint" "endpoints" {
+  count = var.enable_vpc_endpoints ? 1 : 0
+  
+  vpc_id             = var.vpc_id
+  service_name       = "com.amazonaws.${var.region}.s3"
+  vpc_endpoint_type  = "Gateway"
+  route_table_ids    = var.route_table_ids
+
+  tags = {
+    Name = "s3-vpc-endpoint"
+  }
+}

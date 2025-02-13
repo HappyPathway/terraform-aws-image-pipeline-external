@@ -165,3 +165,58 @@ resource "aws_dynamodb_table" "terraform_state_lock" {
     }
   )
 }
+
+resource "aws_iam_role" "build_user_role" {
+  count = var.enable_build_user ? 1 : 0
+  name = "${var.project_name}-build-user-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = var.tags
+}
+
+resource "aws_iam_role_policy" "build_user_policy" {
+  count = var.enable_build_user ? 1 : 0
+  name = "${var.project_name}-build-user-policy"
+  role = aws_iam_role.build_user_role[0].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:Get*",
+          "s3:List*",
+          "s3:ReplicateObject",
+          "s3:PutObject",
+          "s3:RestoreObject",
+          "s3:PutObjectVersionTagging",
+          "s3:PutObjectTagging",
+          "s3:PutObjectAcl"
+        ]
+        Resource = [
+          aws_s3_bucket.assets_bucket[0].arn,
+          "${aws_s3_bucket.assets_bucket[0].arn}/*"
+        ]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_instance_profile" "build_user_instance_profile" {
+  count = var.enable_build_user ? 1 : 0
+  name = "${var.project_name}-instance-profile"
+  role = aws_iam_role.build_user_role[0].name
+}

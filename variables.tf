@@ -72,6 +72,12 @@ variable "enable_state_backend" {
   default     = true
 }
 
+variable "enable_build_user" {
+  description = "Flag to enable/disable the build user resources"
+  type        = bool
+  default     = true
+}
+
 variable "vpc_id" {
   type        = string
   description = "The ID of the VPC where resources will be created"
@@ -90,5 +96,11 @@ variable "subnet_ids" {
 variable "additional_security_group_ids" {
   type        = list(string)
   description = "Additional security group IDs to be added to the VPC configuration"
+  default     = []
+}
+
+variable "route_table_ids" {
+  description = "List of route table IDs for VPC endpoint association"
+  type        = list(string)
   default     = []
 }
