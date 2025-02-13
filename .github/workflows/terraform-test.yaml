@@ -48,7 +48,7 @@ jobs:
         run: terraform init -upgrade
 
       - name: Upload Terraform Directory
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: terraform-dir
           path: |
@@ -88,7 +88,7 @@ jobs:
           TF_SKIP_PROVIDER_VERIFY: "true"
 
       - name: Upload Test Coverage
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-coverage-${{ matrix.test_case }}
           path: ${{ matrix.test_case }}_coverage.out
@@ -144,14 +144,14 @@ jobs:
           echo "${coverage}% (${covered_resources}/${total_resources} resources)" >> coverage_summary.md
 
       - name: Upload Aggregated Results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-coverage-summary
           path: coverage_summary.md
           retention-days: 14
 
       - name: Upload Coverage Badge Data
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-badge
           path: coverage-badge.json
