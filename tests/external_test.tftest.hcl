@@ -1,7 +1,5 @@
 # Terraform test file for external resources module
-provider "aws" {
-  region = "us-west-2"
-}
+provider "aws" {}
 
 # Test basic resource creation
 run "basic_resource_creation" {
