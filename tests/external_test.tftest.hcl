@@ -1,19 +1,6 @@
 # Terraform test file for external resources module
 provider "aws" {
   region = "us-west-2"
-  # Use test credentials/configuration
-  skip_credentials_validation = true
-  skip_requesting_account_id  = true
-  skip_metadata_api_check    = true
-  skip_region_validation     = true
-
-  # Use localstack endpoints for testing if needed
-  # endpoints {
-  #   s3         = "http://localhost:4566"
-  #   dynamodb   = "http://localhost:4566"
-  #   iam        = "http://localhost:4566"
-  #   ec2        = "http://localhost:4566"
-  # }
 }
 
 # Test basic resource creation
