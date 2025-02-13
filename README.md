@@ -101,5 +101,77 @@ module "image_pipeline_external" {
 - State locking is automatically handled by Terraform when using the DynamoDB table
 
 <!-- BEGIN_TF_DOCS -->
-{{ .Content }}
+## Requirements
+
+| Name | Version |
+|------|---------|
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.0.0 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 4.20.1 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| <a name="provider_aws"></a> [aws](#provider\_aws) | 5.86.1 |
+
+## Modules
+
+No modules.
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [aws_dynamodb_table.terraform_state_lock](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/dynamodb_table) | resource |
+| [aws_s3_bucket.assets_bucket](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket) | resource |
+| [aws_s3_bucket.state_bucket](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket) | resource |
+| [aws_s3_bucket_policy.assets_bucket_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_policy) | resource |
+| [aws_s3_bucket_public_access_block.assets_bucket_access](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_public_access_block) | resource |
+| [aws_s3_bucket_public_access_block.state_bucket_access](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_public_access_block) | resource |
+| [aws_s3_bucket_server_side_encryption_configuration.assets_bucket_encryption](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_server_side_encryption_configuration) | resource |
+| [aws_s3_bucket_server_side_encryption_configuration.state_bucket_encryption](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_server_side_encryption_configuration) | resource |
+| [aws_s3_bucket_versioning.assets_bucket_versioning](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_versioning) | resource |
+| [aws_s3_bucket_versioning.state_bucket_versioning](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_versioning) | resource |
+| [aws_security_group.pipeline_security_group](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group) | resource |
+| [aws_vpc_endpoint.endpoint](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_endpoint) | resource |
+| [aws_vpc_security_group_egress_rule.allow_all_traffic_ipv4](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_security_group_egress_rule) | resource |
+| [aws_vpc_security_group_ingress_rule.allow_self_traffic](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_security_group_ingress_rule) | resource |
+| [aws_iam_policy_document.assets_bucket_policy_document](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
+| [aws_security_group.it_linux_base](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/security_group) | data source |
+| [aws_subnet.selected](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/subnet) | data source |
+| [aws_vpc.selected](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/vpc) | data source |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| <a name="input_additional_security_group_ids"></a> [additional\_security\_group\_ids](#input\_additional\_security\_group\_ids) | Additional security group IDs to be added to the VPC configuration | `list(string)` | `[]` | no |
+| <a name="input_assets_bucket_name"></a> [assets\_bucket\_name](#input\_assets\_bucket\_name) | Name of the S3 bucket for storing pipeline artifacts | `string` | `"image-pipeline-assets"` | no |
+| <a name="input_enable_assets_bucket"></a> [enable\_assets\_bucket](#input\_enable\_assets\_bucket) | Flag to enable/disable the assets S3 bucket and related resources | `bool` | `true` | no |
+| <a name="input_enable_security_groups"></a> [enable\_security\_groups](#input\_enable\_security\_groups) | Flag to enable/disable security group resources | `bool` | `true` | no |
+| <a name="input_enable_state_backend"></a> [enable\_state\_backend](#input\_enable\_state\_backend) | Flag to enable/disable state backend resources (S3 bucket and DynamoDB) | `bool` | `true` | no |
+| <a name="input_enable_vpc_endpoints"></a> [enable\_vpc\_endpoints](#input\_enable\_vpc\_endpoints) | Flag to enable/disable VPC endpoint resources | `bool` | `true` | no |
+| <a name="input_pipeline_iam_arns"></a> [pipeline\_iam\_arns](#input\_pipeline\_iam\_arns) | List of IAM ARNs that need access to the assets bucket | `list(string)` | n/a | yes |
+| <a name="input_project_name"></a> [project\_name](#input\_project\_name) | Name of the project to be used as prefix for resources | `string` | n/a | yes |
+| <a name="input_region"></a> [region](#input\_region) | The AWS region where resources will be created | `string` | n/a | yes |
+| <a name="input_state_bucket_name"></a> [state\_bucket\_name](#input\_state\_bucket\_name) | Name of the S3 bucket for storing terraform state | `string` | n/a | yes |
+| <a name="input_subnet_ids"></a> [subnet\_ids](#input\_subnet\_ids) | List of subnet IDs where resources will be created | `list(string)` | n/a | yes |
+| <a name="input_tags"></a> [tags](#input\_tags) | Additional tags to apply to resources | `map(string)` | `{}` | no |
+| <a name="input_vpc_config"></a> [vpc\_config](#input\_vpc\_config) | VPC configuration for the pipeline resources | <pre>object({<br>    vpc_id            = string<br>    region            = string<br>    security_group_ids = list(string)<br>    subnets           = list(string)<br>  })</pre> | n/a | yes |
+| <a name="input_vpc_endpoints"></a> [vpc\_endpoints](#input\_vpc\_endpoints) | List of VPC endpoints to create | `list(string)` | <pre>[<br>  "codecommit",<br>  "ecr.api",<br>  "ecr.dkr",<br>  "git-codecommit",<br>  "s3"<br>]</pre> | no |
+| <a name="input_vpc_id"></a> [vpc\_id](#input\_vpc\_id) | The ID of the VPC where resources will be created | `string` | n/a | yes |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| <a name="output_assets_bucket_arn"></a> [assets\_bucket\_arn](#output\_assets\_bucket\_arn) | ARN of the assets S3 bucket |
+| <a name="output_assets_bucket_name"></a> [assets\_bucket\_name](#output\_assets\_bucket\_name) | Name of the assets S3 bucket |
+| <a name="output_pipeline_security_group_id"></a> [pipeline\_security\_group\_id](#output\_pipeline\_security\_group\_id) | ID of the pipeline security group |
+| <a name="output_state"></a> [state](#output\_state) | State configuration |
+| <a name="output_state_bucket_arn"></a> [state\_bucket\_arn](#output\_state\_bucket\_arn) | ARN of the Terraform state S3 bucket |
+| <a name="output_state_bucket_name"></a> [state\_bucket\_name](#output\_state\_bucket\_name) | Name of the Terraform state S3 bucket |
+| <a name="output_state_lock_table_name"></a> [state\_lock\_table\_name](#output\_state\_lock\_table\_name) | Name of the DynamoDB state lock table |
+| <a name="output_vpc_config"></a> [vpc\_config](#output\_vpc\_config) | VPC configuration including VPC ID, region, security groups, and subnets |
+| <a name="output_vpc_endpoints"></a> [vpc\_endpoints](#output\_vpc\_endpoints) | Map of created VPC endpoints |
 <!-- END_TF_DOCS -->

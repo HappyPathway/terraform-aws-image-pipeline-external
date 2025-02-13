@@ -28,6 +28,14 @@ output "state_lock_table_name" {
   value       = var.enable_state_backend ? aws_dynamodb_table.terraform_state_lock[0].name : null
 }
 
+output state {
+  description = "State configuration"
+  value       = {
+    dynamodb_table = var.enable_state_backend ? aws_dynamodb_table.terraform_state_lock[0].name : null
+    bucket         = var.enable_state_backend ? aws_s3_bucket.state_bucket[0].id : null
+  }
+}
+
 output "vpc_endpoints" {
   description = "Map of created VPC endpoints"
   value       = var.enable_vpc_endpoints ? aws_vpc_endpoint.endpoints : null
