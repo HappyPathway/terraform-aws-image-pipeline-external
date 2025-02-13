@@ -15,7 +15,11 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       test_cases: ${{ steps.get-test-cases.outputs.test_cases }}
-    
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }} 
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -82,9 +86,6 @@ jobs:
             -coverage="${{ matrix.test_case }}_coverage.out"
         env:
           TF_SKIP_PROVIDER_VERIFY: "true"
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
 
       - name: Upload Test Coverage
         uses: actions/upload-artifact@v3
