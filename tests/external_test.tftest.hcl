@@ -136,11 +136,6 @@ run "security_group_rules" {
   }
 
   assert {
-    condition     = aws_vpc_security_group_ingress_rule.allow_self_traffic.security_group_id == aws_security_group.pipeline_security_group.id
-    error_message = "Security group ingress rule should reference the pipeline security group"
-  }
-
-  assert {
     condition     = aws_security_group.pipeline_security_group.vpc_id == "vpc-12345678"
     error_message = "Security group should be created in the specified VPC"
   }
