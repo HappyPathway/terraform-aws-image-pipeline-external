@@ -35,25 +35,22 @@ jobs:
         with:
           terraform_version: "1.5.0"
 
-      # Cache .terraform directory
-      - name: Cache Terraform Directory
-        uses: actions/cache@v3
-        with:
-          path: .terraform
-          key: ${{ runner.os }}-terraform-${{ hashFiles('**/.terraform.lock.hcl') }}
-          restore-keys: |
-            ${{ runner.os }}-terraform-
+      - name: Create Test Case Directories
+        run: |
+          for test_case in $(echo '${{ steps.get-test-cases.outputs.test_cases }}' | jq -r '.[]'); do
+            mkdir -p "tf-$test_case"
+            cp -r * "tf-$test_case/" 2>/dev/null || true
+            cd "tf-$test_case"
+            terraform init -upgrade
+            cd ..
+          done
 
-      - name: Terraform Init
-        run: terraform init -upgrade
-
-      - name: Upload Terraform Directory
-        uses: actions/upload-artifact@v3
+      - name: Upload Test Case Terraform Directories
+        uses: actions/upload-artifact@v4
         with:
-          name: terraform-dir
-          path: |
-            .terraform
-            .terraform.lock.hcl
+          name: terraform-dirs
+          path: tf-*/
+          retention-days: 1
 
   test:
     needs: setup
@@ -62,8 +59,11 @@ jobs:
     strategy:
       matrix:
         test_case: ${{ fromJson(needs.setup.outputs.test_cases) }}
-      # Allow all test cases to run even if one fails
       fail-fast: false
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
     
     steps:
       - name: Checkout Code
@@ -74,10 +74,17 @@ jobs:
         with:
           terraform_version: "1.5.0"
 
-      - name: Download Terraform Directory
-        uses: actions/download-artifact@v3
+      - name: Download Test Case Terraform Directory
+        uses: actions/download-artifact@v4
         with:
-          name: terraform-dir
+          name: terraform-dirs
+          path: .
+
+      - name: Prepare Test Environment
+        run: |
+          # Move test-specific Terraform directory contents to working directory
+          mv tf-${{ matrix.test_case }}/* .
+          rm -rf tf-*
 
       - name: Run Single Test Case
         run: |
@@ -88,7 +95,7 @@ jobs:
           TF_SKIP_PROVIDER_VERIFY: "true"
 
       - name: Upload Test Coverage
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-coverage-${{ matrix.test_case }}
           path: ${{ matrix.test_case }}_coverage.out
