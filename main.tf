@@ -1,7 +1,8 @@
 # Main module for external AWS Image Pipeline resources
 
-# Assets S3 bucket for storing artifacts
+# Assets S3 bucket resources
 resource "aws_s3_bucket" "assets_bucket" {
+  count  = var.enable_assets_bucket ? 1 : 0
   bucket = var.assets_bucket_name
 
   tags = {
@@ -10,14 +11,16 @@ resource "aws_s3_bucket" "assets_bucket" {
 }
 
 resource "aws_s3_bucket_versioning" "assets_bucket_versioning" {
-  bucket = aws_s3_bucket.assets_bucket.id
+  count  = var.enable_assets_bucket ? 1 : 0
+  bucket = aws_s3_bucket.assets_bucket[0].id
   versioning_configuration {
     status = "Enabled"
   }
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "assets_bucket_encryption" {
-  bucket = aws_s3_bucket.assets_bucket.id
+  count  = var.enable_assets_bucket ? 1 : 0
+  bucket = aws_s3_bucket.assets_bucket[0].id
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm = "aws:kms"
@@ -26,7 +29,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "assets_bucket_enc
 }
 
 resource "aws_s3_bucket_public_access_block" "assets_bucket_access" {
-  bucket = aws_s3_bucket.assets_bucket.id
+  count  = var.enable_assets_bucket ? 1 : 0
+  bucket = aws_s3_bucket.assets_bucket[0].id
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
@@ -34,11 +38,13 @@ resource "aws_s3_bucket_public_access_block" "assets_bucket_access" {
 }
 
 resource "aws_s3_bucket_policy" "assets_bucket_policy" {
-  bucket = aws_s3_bucket.assets_bucket.id
-  policy = data.aws_iam_policy_document.assets_bucket_policy_document.json
+  count  = var.enable_assets_bucket ? 1 : 0
+  bucket = aws_s3_bucket.assets_bucket[0].id
+  policy = data.aws_iam_policy_document.assets_bucket_policy_document[0].json
 }
 
 data "aws_iam_policy_document" "assets_bucket_policy_document" {
+  count  = var.enable_assets_bucket ? 1 : 0
   statement {
     principals {
       type = "AWS"
@@ -57,14 +63,15 @@ data "aws_iam_policy_document" "assets_bucket_policy_document" {
     ]
 
     resources = [
-      aws_s3_bucket.assets_bucket.arn,
-      "${aws_s3_bucket.assets_bucket.arn}/*",
+      aws_s3_bucket.assets_bucket[0].arn,
+      "${aws_s3_bucket.assets_bucket[0].arn}/*",
     ]
   }
 }
 
 # VPC Endpoints
 resource "aws_vpc_endpoint" "endpoints" {
+  count             = var.enable_vpc_endpoints ? 1 : 0
   for_each          = toset(var.vpc_endpoints)
   vpc_id            = var.vpc_config.vpc_id
   service_name      = "com.amazonaws.${var.vpc_config.region}.${each.value}"
@@ -76,30 +83,34 @@ resource "aws_vpc_endpoint" "endpoints" {
 
 # Security Groups
 resource "aws_security_group" "pipeline_security_group" {
+  count       = var.enable_security_groups ? 1 : 0
   name        = "${var.project_name}-pipeline-security"
   description = "Security group for image pipeline components"
   vpc_id      = var.vpc_config.vpc_id
 
   tags = {
-    Name = "${var.project_name}-pipeline-security"
+    Name    = "${var.project_name}-pipeline-security"
     Project = var.project_name
   }
 }
 
 resource "aws_vpc_security_group_egress_rule" "allow_all_traffic_ipv4" {
-  security_group_id = aws_security_group.pipeline_security_group.id
+  count             = var.enable_security_groups ? 1 : 0
+  security_group_id = aws_security_group.pipeline_security_group[0].id
   cidr_ipv4        = "0.0.0.0/0"
   ip_protocol      = "-1"
 }
 
 resource "aws_vpc_security_group_ingress_rule" "allow_self_traffic" {
-  security_group_id                  = aws_security_group.pipeline_security_group.id
-  referenced_security_group_id       = aws_security_group.pipeline_security_group.id
-  ip_protocol                       = "-1"
+  count                             = var.enable_security_groups ? 1 : 0
+  security_group_id                 = aws_security_group.pipeline_security_group[0].id
+  referenced_security_group_id      = aws_security_group.pipeline_security_group[0].id
+  ip_protocol                      = "-1"
 }
 
-# State Backend Configuration
+# State Backend Resources
 resource "aws_s3_bucket" "state_bucket" {
+  count  = var.enable_state_backend ? 1 : 0
   bucket = var.state_bucket_name
 
   tags = merge(
@@ -111,7 +122,8 @@ resource "aws_s3_bucket" "state_bucket" {
 }
 
 resource "aws_s3_bucket_public_access_block" "state_bucket_access" {
-  bucket = aws_s3_bucket.state_bucket.id
+  count  = var.enable_state_backend ? 1 : 0
+  bucket = aws_s3_bucket.state_bucket[0].id
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
@@ -119,14 +131,16 @@ resource "aws_s3_bucket_public_access_block" "state_bucket_access" {
 }
 
 resource "aws_s3_bucket_versioning" "state_bucket_versioning" {
-  bucket = aws_s3_bucket.state_bucket.id
+  count  = var.enable_state_backend ? 1 : 0
+  bucket = aws_s3_bucket.state_bucket[0].id
   versioning_configuration {
     status = "Enabled"
   }
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "state_bucket_encryption" {
-  bucket = aws_s3_bucket.state_bucket.id
+  count  = var.enable_state_backend ? 1 : 0
+  bucket = aws_s3_bucket.state_bucket[0].id
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm = "aws:kms"
@@ -134,8 +148,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "state_bucket_encr
   }
 }
 
-# Add DynamoDB table for state locking
 resource "aws_dynamodb_table" "terraform_state_lock" {
+  count        = var.enable_state_backend ? 1 : 0
   name         = "${var.project_name}-terraform-state-lock"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "LockID"

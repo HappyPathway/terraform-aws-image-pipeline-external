@@ -45,5 +45,29 @@ variable "tags" {
   type        = map(string)
   description = "Additional tags to apply to resources"
   default     = {}
+}
 
+# Feature flags for resource groups
+variable "enable_assets_bucket" {
+  description = "Flag to enable/disable the assets S3 bucket and related resources"
+  type        = bool
+  default     = true
+}
+
+variable "enable_vpc_endpoints" {
+  description = "Flag to enable/disable VPC endpoint resources"
+  type        = bool
+  default     = true
+}
+
+variable "enable_security_groups" {
+  description = "Flag to enable/disable security group resources"
+  type        = bool
+  default     = true
+}
+
+variable "enable_state_backend" {
+  description = "Flag to enable/disable state backend resources (S3 bucket and DynamoDB)"
+  type        = bool
+  default     = true
 }

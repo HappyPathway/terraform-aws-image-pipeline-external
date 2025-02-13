@@ -1,36 +1,34 @@
-output "assets_bucket" {
-  description = "The assets S3 bucket object"
-  value = {
-    id     = aws_s3_bucket.assets_bucket.id
-    arn    = aws_s3_bucket.assets_bucket.arn
-    bucket = aws_s3_bucket.assets_bucket.bucket
-  }
+output "assets_bucket_arn" {
+  description = "ARN of the assets S3 bucket"
+  value       = var.enable_assets_bucket ? aws_s3_bucket.assets_bucket[0].arn : null
 }
 
-output "state_bucket" {
-  description = "The state backend S3 bucket object"
-  value = {
-    id     = aws_s3_bucket.state_bucket.id
-    arn    = aws_s3_bucket.state_bucket.arn
-    bucket = aws_s3_bucket.state_bucket.bucket
-  }
+output "assets_bucket_name" {
+  description = "Name of the assets S3 bucket"
+  value       = var.enable_assets_bucket ? aws_s3_bucket.assets_bucket[0].id : null
 }
 
-output "state_lock_table" {
-  description = "The DynamoDB table used for state locking"
-  value = {
-    id    = aws_dynamodb_table.terraform_state_lock.id
-    arn   = aws_dynamodb_table.terraform_state_lock.arn
-    name  = aws_dynamodb_table.terraform_state_lock.name
-  }
-}
-
-output "security_group_id" {
+output "pipeline_security_group_id" {
   description = "ID of the pipeline security group"
-  value       = aws_security_group.pipeline_security_group.id
+  value       = var.enable_security_groups ? aws_security_group.pipeline_security_group[0].id : null
+}
+
+output "state_bucket_arn" {
+  description = "ARN of the Terraform state S3 bucket"
+  value       = var.enable_state_backend ? aws_s3_bucket.state_bucket[0].arn : null
+}
+
+output "state_bucket_name" {
+  description = "Name of the Terraform state S3 bucket"
+  value       = var.enable_state_backend ? aws_s3_bucket.state_bucket[0].id : null
+}
+
+output "state_lock_table_name" {
+  description = "Name of the DynamoDB state lock table"
+  value       = var.enable_state_backend ? aws_dynamodb_table.terraform_state_lock[0].name : null
 }
 
 output "vpc_endpoints" {
   description = "Map of created VPC endpoints"
-  value       = { for k, v in aws_vpc_endpoint.endpoints : k => v.id }
+  value       = var.enable_vpc_endpoints ? aws_vpc_endpoint.endpoints : null
 }
