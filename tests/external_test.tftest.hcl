@@ -1,13 +1,5 @@
 # Terraform test file for external resources module
-provider "aws" {
-  region = "us-west-2"
-  # Mock provider configuration
-  skip_credentials_validation = true
-  skip_requesting_account_id = true
-  skip_metadata_api_check    = true
-  access_key                = "mock_access_key"
-  secret_key                = "mock_secret_key"
-}
+mock_provider "aws" {}
 
 # Test basic resource creation
 run "basic_resource_creation" {
