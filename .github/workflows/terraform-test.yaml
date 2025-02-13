@@ -10,56 +10,9 @@ on:
       - main
 
 jobs:
-  setup:
-    name: Setup Test Environment
-    runs-on: ubuntu-latest
-    outputs:
-      test_cases: ${{ steps.get-test-cases.outputs.test_cases }}
-    env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_REGION: ${{ secrets.AWS_REGION }} 
-       
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Get Test Cases
-        id: get-test-cases
-        run: |
-          TEST_CASES='["basic_resource_creation", "bucket_configurations", "vpc_endpoint_creation", "security_group_rules", "custom_tags"]'
-          echo "test_cases=$TEST_CASES" >> $GITHUB_OUTPUT
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.5.0"
-
-      - name: Create Test Case Directories
-        run: |
-          for test_case in $(echo '${{ steps.get-test-cases.outputs.test_cases }}' | jq -r '.[]'); do
-            mkdir -p "tf-$test_case"
-            cp -r * "tf-$test_case/" 2>/dev/null || true
-            cd "tf-$test_case"
-            terraform init -upgrade
-            cd ..
-          done
-
-      - name: Upload Test Case Terraform Directories
-        uses: actions/upload-artifact@v4
-        with:
-          name: terraform-dirs
-          path: tf-*/
-          retention-days: 1
-
   test:
-    needs: setup
-    name: Run Test Case
+    name: Run Tests
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        test_case: ${{ fromJson(needs.setup.outputs.test_cases) }}
-      fail-fast: false
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -73,32 +26,36 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.5.0"
-
-      - name: Download Test Case Terraform Directory
-        uses: actions/download-artifact@v4
-        with:
-          name: terraform-dirs
-          path: .
-
-      - name: Prepare Test Environment
+          
+      - name: Run Tests by Test Case
         run: |
-          # Move test-specific Terraform directory contents to working directory
-          mv tf-${{ matrix.test_case }}/* .
-          rm -rf tf-*
-
-      - name: Run Single Test Case
-        run: |
-          terraform test -test-directory="tests" \
-            -filter="${{ matrix.test_case }}" \
-            -coverage="${{ matrix.test_case }}_coverage.out"
+          TEST_CASES=("basic_resource_creation" "bucket_configurations" "vpc_endpoint_creation" "security_group_rules" "custom_tags")
+          
+          for test_case in "${TEST_CASES[@]}"; do
+            echo "Running test case: $test_case"
+            
+            # Create test-specific directory
+            mkdir -p "tf-${test_case}"
+            cp -r * "tf-${test_case}/" 2>/dev/null || true
+            
+            # Switch to test directory and run test
+            cd "tf-${test_case}"
+            terraform init -upgrade
+            terraform test -test-directory="tests" -filter="$test_case" -coverage="${test_case}_coverage.out" || exit 1
+            cd ..
+            
+            # Clean up test directory except coverage file
+            mv "tf-${test_case}/${test_case}_coverage.out" .
+            rm -rf "tf-${test_case}"
+          done
         env:
           TF_SKIP_PROVIDER_VERIFY: "true"
 
       - name: Upload Test Coverage
         uses: actions/upload-artifact@v4
         with:
-          name: test-coverage-${{ matrix.test_case }}
-          path: ${{ matrix.test_case }}_coverage.out
+          name: test-coverage
+          path: "*_coverage.out"
           retention-days: 14
 
   aggregate-results:
@@ -110,9 +67,10 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Download All Coverage Reports
-        uses: actions/download-artifact@v3
+      - name: Download Coverage Reports
+        uses: actions/download-artifact@v4
         with:
+          name: test-coverage
           path: coverage-reports
 
       - name: Display Structure of Coverage Reports
@@ -126,12 +84,11 @@ jobs:
           total_resources=0
           covered_resources=0
           
-          for report in coverage-reports/test-coverage-*/coverage.out; do
-            test_case=$(basename $(dirname $report) | sed 's/test-coverage-//')
+          for report in coverage-reports/*_coverage.out; do
+            test_case=$(basename $report | sed 's/_coverage.out//')
             echo "### $test_case" >> coverage_summary.md
             cat $report >> coverage_summary.md
             
-            # Extract coverage numbers
             while IFS= read -r line; do
               if [[ $line =~ ([0-9]+)/([0-9]+)[[:space:]]resources[[:space:]]covered ]]; then
                 covered_resources=$((covered_resources + ${BASH_REMATCH[1]}))
@@ -142,23 +99,21 @@ jobs:
             echo -e "\n---\n" >> coverage_summary.md
           done
           
-          # Calculate total coverage percentage
           coverage=$(( (covered_resources * 100) / total_resources ))
           echo "{\"coverage\": ${coverage}}" > coverage-badge.json
           
-          # Add total coverage to summary
           echo -e "\n## Total Coverage" >> coverage_summary.md
           echo "${coverage}% (${covered_resources}/${total_resources} resources)" >> coverage_summary.md
 
-      - name: Upload Aggregated Results
-        uses: actions/upload-artifact@v3
+      - name: Upload Summary
+        uses: actions/upload-artifact@v4
         with:
           name: test-coverage-summary
           path: coverage_summary.md
           retention-days: 14
 
-      - name: Upload Coverage Badge Data
-        uses: actions/upload-artifact@v3
+      - name: Upload Badge Data
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-badge
           path: coverage-badge.json
