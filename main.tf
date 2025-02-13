@@ -70,9 +70,8 @@ data "aws_iam_policy_document" "assets_bucket_policy_document" {
 }
 
 # VPC Endpoints
-resource "aws_vpc_endpoint" "endpoints" {
-  count             = var.enable_vpc_endpoints ? 1 : 0
-  for_each          = toset(var.vpc_endpoints)
+resource "aws_vpc_endpoint" "endpoint" {
+  for_each          = var.enable_vpc_endpoints ? toset(var.vpc_endpoints) : []
   vpc_id            = var.vpc_config.vpc_id
   service_name      = "com.amazonaws.${var.vpc_config.region}.${each.value}"
   vpc_endpoint_type = "Interface"
