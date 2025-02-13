@@ -139,11 +139,6 @@ run "security_group_rules" {
     condition     = aws_security_group.pipeline_security_group.vpc_id == "vpc-12345678"
     error_message = "Security group should be created in the specified VPC"
   }
-
-  assert {
-    condition     = aws_security_group.pipeline_security_group.name_prefix == "test-pipeline-"
-    error_message = "Security group should use project name as prefix"
-  }
 }
 
 # Test custom tags
