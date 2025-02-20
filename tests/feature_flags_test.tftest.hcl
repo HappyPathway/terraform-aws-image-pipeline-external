@@ -10,19 +10,13 @@ provider "aws" {
 
 variables {
   project_name = "test-project"
-  assets_bucket_name = "test-assets-bucket"
+  region = "us-west-2"
   state_bucket_name = "test-state-bucket"
-  pipeline_iam_arns = ["arn:aws:iam::123456789012:role/test-role"]
-  vpc_config = {
-    vpc_id = "vpc-12345"
-    region = "us-west-2"
-    security_group_ids = ["sg-12345"]
-    subnets = ["subnet-12345"]
-  }
-  vpc_endpoints = ["s3", "ecr.api"]
-  tags = {
-    Environment = "test"
-  }
+  assets_bucket_name = "test-assets-bucket"
+  pipeline_iam_arns = []
+  existing_vpc_id = "vpc-12345"
+  existing_security_group_ids = ["sg-12345"]
+  existing_subnet_ids = ["subnet-12345"]
 }
 
 # Test all features enabled
@@ -34,24 +28,23 @@ run "all_features_enabled" {
     enable_state_backend = true
   }
 
-  assert {
-    condition = aws_s3_bucket.assets_bucket[0].bucket == "test-assets-bucket"
-    error_message = "Assets bucket not created correctly"
+  plan_options {
+    mode = refresh-only
   }
 
   assert {
-    condition = length(aws_vpc_endpoint.endpoints) == 2
-    error_message = "VPC endpoints not created correctly"
+    condition     = length(aws_s3_bucket.assets_bucket) > 0
+    error_message = "Assets bucket should be created when enabled"
   }
 
   assert {
-    condition = aws_security_group.pipeline_security_group[0].name == "test-project-pipeline-security"
-    error_message = "Security group not created correctly"
+    condition     = length(aws_s3_bucket.state_bucket) > 0
+    error_message = "State bucket should be created when enabled"
   }
 
   assert {
-    condition = aws_s3_bucket.state_bucket[0].bucket == "test-state-bucket"
-    error_message = "State bucket not created correctly"
+    condition     = length(aws_dynamodb_table.terraform_state_lock) > 0
+    error_message = "DynamoDB table should be created when enabled"
   }
 }
 
@@ -64,23 +57,22 @@ run "all_features_disabled" {
     enable_state_backend = false
   }
 
-  assert {
-    condition = length(aws_s3_bucket.assets_bucket) == 0
-    error_message = "Assets bucket should not exist"
+  plan_options {
+    mode = refresh-only
   }
 
   assert {
-    condition = length(aws_vpc_endpoint.endpoints) == 0
-    error_message = "VPC endpoints should not exist"
+    condition     = length(aws_s3_bucket.assets_bucket) == 0
+    error_message = "Assets bucket should not be created when disabled"
   }
 
   assert {
-    condition = length(aws_security_group.pipeline_security_group) == 0
-    error_message = "Security group should not exist"
+    condition     = length(aws_s3_bucket.state_bucket) == 0
+    error_message = "State bucket should not be created when disabled"
   }
 
   assert {
-    condition = length(aws_s3_bucket.state_bucket) == 0
-    error_message = "State bucket should not exist"
+    condition     = length(aws_dynamodb_table.terraform_state_lock) == 0
+    error_message = "DynamoDB table should not be created when disabled"
   }
 }

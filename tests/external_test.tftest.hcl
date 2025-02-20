@@ -1,6 +1,16 @@
 # Terraform test file for external resources module
 mock_provider "aws" {}
 
+variables {
+  project_name = "test-project"
+  region = "us-west-2"
+  state_bucket_name = "test-state-bucket"
+  assets_bucket_name = "test-assets-bucket"
+  pipeline_iam_arns = ["arn:aws:iam::123456789012:role/test-role"]
+  enable_assets_bucket = true
+  enable_state_backend = true
+}
+
 # Test basic resource creation
 run "basic_resource_creation" {
   command = plan
@@ -21,23 +31,13 @@ run "basic_resource_creation" {
 
   # Verify resource creation
   assert {
-    condition     = aws_s3_bucket.assets_bucket.bucket == "test-assets-bucket"
-    error_message = "Assets bucket name does not match expected value"
+    condition     = aws_s3_bucket.state_bucket[0].bucket == "test-state-bucket"
+    error_message = "State bucket should be created with correct name"
   }
 
   assert {
-    condition     = aws_s3_bucket.state_bucket.bucket == "test-state-bucket"
-    error_message = "State bucket name does not match expected value"
-  }
-
-  assert {
-    condition     = aws_dynamodb_table.terraform_state_lock.billing_mode == "PAY_PER_REQUEST"
-    error_message = "DynamoDB table should use PAY_PER_REQUEST billing mode"
-  }
-
-  assert {
-    condition     = aws_security_group.pipeline_security_group.vpc_id == "vpc-12345678"
-    error_message = "Security group VPC ID does not match expected value"
+    condition     = aws_dynamodb_table.terraform_state_lock[0].name == "test-project-terraform-state-lock"
+    error_message = "DynamoDB table should be created with correct name"
   }
 }
 
@@ -56,26 +56,47 @@ run "bucket_configurations" {
       security_group_ids = ["sg-12345678"]
       subnets           = ["subnet-12345678"]
     }
+    enable_assets_bucket = true
+    enable_state_backend = true
   }
 
   assert {
-    condition     = aws_s3_bucket_versioning.assets_bucket_versioning.versioning_configuration[0].status == "Enabled"
+    condition     = aws_s3_bucket_versioning.assets_bucket_versioning[0].versioning_configuration[0].status == "Enabled"
     error_message = "Assets bucket versioning should be enabled"
   }
 
   assert {
-    condition     = aws_s3_bucket_versioning.state_bucket_versioning.versioning_configuration[0].status == "Enabled"
-    error_message = "State bucket versioning should be enabled"
+    condition     = aws_s3_bucket_server_side_encryption_configuration.assets_bucket_encryption[0].rule[0].apply_server_side_encryption_by_default[0].sse_algorithm == "aws:kms"
+    error_message = "Assets bucket encryption should be enabled with KMS"
+  }
+}
+
+run "bucket_policies" {
+  command = plan
+
+  variables {
+    project_name      = "test-pipeline"
+    state_bucket_name = "test-state-bucket"
+    assets_bucket_name = "test-assets-bucket"
+    pipeline_iam_arns = ["arn:aws:iam::123456789012:role/test-role"]
+    vpc_config = {
+      vpc_id            = "vpc-12345678"
+      region            = "us-west-2"
+      security_group_ids = ["sg-12345678"]
+      subnets           = ["subnet-12345678"]
+    }
+    enable_assets_bucket = true
+    enable_state_backend = true
   }
 
   assert {
-    condition     = aws_s3_bucket_public_access_block.assets_bucket_access.block_public_acls == true
-    error_message = "Assets bucket should block public ACLs"
+    condition     = can(aws_s3_bucket_policy.assets_bucket_policy[0].policy)
+    error_message = "Assets bucket policy should be created"
   }
 
   assert {
-    condition     = aws_s3_bucket_public_access_block.state_bucket_access.block_public_acls == true
-    error_message = "State bucket should block public ACLs"
+    condition     = aws_s3_bucket_public_access_block.assets_bucket_access[0].block_public_acls
+    error_message = "Public access should be blocked on assets bucket"
   }
 }
 

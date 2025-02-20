@@ -1,0 +1,1 @@
+// This file is intentionally empty as its contents have been moved to variables.tf
