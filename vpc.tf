@@ -7,8 +7,8 @@ data "aws_vpc" "selected" {
 }
 
 data "aws_subnet" "selected" {
-  count = length(var.vpc_config.subnet_ids)
-  id    = var.vpc_config.subnet_ids[count.index]
+  count = length(var.vpc_config.subnets)
+  id    = var.vpc_config.subnets[count.index]
 }
 
 locals {
@@ -19,7 +19,7 @@ locals {
       [data.aws_security_group.it_linux_base.id],
       var.additional_security_group_ids
     )
-    subnets = var.vpc_config.subnet_ids
+    subnets = var.vpc_config.subnets
   }
 }
 
