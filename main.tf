@@ -69,17 +69,6 @@ data "aws_iam_policy_document" "assets_bucket_policy_document" {
   }
 }
 
-# VPC Endpoints
-resource "aws_vpc_endpoint" "endpoint" {
-  for_each          = var.enable_vpc_endpoints ? toset(var.vpc_endpoints) : []
-  vpc_id            = var.vpc_config.vpc_id
-  service_name      = "com.amazonaws.${var.vpc_config.region}.${each.value}"
-  vpc_endpoint_type = "Interface"
-
-  security_group_ids = var.vpc_config.security_group_ids
-  subnet_ids         = var.vpc_config.subnets
-}
-
 # Security Groups
 resource "aws_security_group" "pipeline_security_group" {
   count       = var.enable_security_groups ? 1 : 0
