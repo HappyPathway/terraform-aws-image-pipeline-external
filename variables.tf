@@ -33,10 +33,8 @@ variable "vpc_endpoints" {
   type        = list(string)
   description = "List of VPC endpoints to create"
   default = [
-    "codecommit",
     "ecr.api",
     "ecr.dkr",
-    "git-codecommit",
     "s3"
   ]
 }
@@ -78,15 +76,6 @@ variable "enable_build_user" {
   default     = true
 }
 
-variable "region" {
-  type        = string
-  description = "The AWS region where resources will be created"
-}
-
-variable "subnet_ids" {
-  type        = list(string)
-  description = "List of subnet IDs where resources will be created"
-}
 
 variable "additional_security_group_ids" {
   type        = list(string)
