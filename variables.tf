@@ -33,8 +33,6 @@ variable "vpc_endpoints" {
   type        = list(string)
   description = "List of VPC endpoints to create"
   default = [
-    "ecr.api",
-    "ecr.dkr",
     "s3"
   ]
 }
