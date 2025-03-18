@@ -78,11 +78,6 @@ variable "enable_build_user" {
   default     = true
 }
 
-variable "vpc_id" {
-  type        = string
-  description = "The ID of the VPC where resources will be created"
-}
-
 variable "region" {
   type        = string
   description = "The AWS region where resources will be created"

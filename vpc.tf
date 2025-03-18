@@ -3,7 +3,7 @@ data "aws_security_group" "it_linux_base" {
 }
 
 data "aws_vpc" "selected" {
-  id = var.vpc_id
+  id = var.vpc_config.vpc_id
 }
 
 data "aws_subnet" "selected" {
@@ -13,8 +13,8 @@ data "aws_subnet" "selected" {
 
 locals {
   vpc_config = {
-    vpc_id = var.vpc_id
-    region = var.region
+    vpc_id = var.vpc_config.vpc_id
+    region = var.vpc_config.region
     security_group_ids = concat(
       [data.aws_security_group.it_linux_base.id],
       var.additional_security_group_ids
@@ -26,7 +26,7 @@ locals {
 resource "aws_vpc_endpoint" "endpoints" {
   count = var.enable_vpc_endpoints ? 1 : 0
   
-  vpc_id             = var.vpc_id
+  vpc_id             = var.vpc_config.vpc_id
   service_name       = "com.amazonaws.${var.region}.s3"
   vpc_endpoint_type  = "Gateway"
   route_table_ids    = var.route_table_ids
